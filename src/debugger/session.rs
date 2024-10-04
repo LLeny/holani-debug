@@ -260,7 +260,7 @@ impl LynxSession {
                         .pick_file() {
                             match std::fs::read(path) {
                                 Err(_) => panic!(),
-                                Ok(data) => match holani::deserialize(&data) {
+                                Ok(data) => match holani::deserialize(&data, &self.lynx) {
                                     Err(_) => panic!(),
                                     Ok(lynx) => self.lynx = lynx,
                                 }
