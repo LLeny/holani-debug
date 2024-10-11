@@ -1,10 +1,8 @@
-use std::{f32::consts::FRAC_PI_2, num::NonZeroU32, path::PathBuf, thread::{self, JoinHandle}, time::Duration};
+use std::{f32::consts::FRAC_PI_2, path::PathBuf};
 use egui::{vec2, Color32, RichText, TextureOptions, Vec2, Widget};
 use egui_memory_editor::MemoryEditor;
-use governor::{Quota, RateLimiter};
-use holani::{consts::INTSET, mikey::{cpu::M6502Flags, video::RGB_SCREEN_BUFFER_LEN}, suzy::registers::{Joystick, Switches}, Lynx};
-
-use super::{breakpoints::Breakpoints, disassembler::DisasmWidget, settings, timers::Timers, watches::Watches};
+use holani::{consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN}, suzy::registers::{Joystick, Switches}, Lynx};
+use super::{breakpoints::Breakpoints, disassembler::DisasmWidget, settings::Settings, timers::Timers, watches::Watches};
 use holani::consts::*;
 
 macro_rules! cond_strong_label {
@@ -38,7 +36,6 @@ pub enum RunnerStatus {
 
 pub struct LynxSession {
     thread_nr: usize,
-    controlled_speed: bool,
     lynx: Lynx,
     disassembler: DisasmWidget,
     timers: Timers,
@@ -56,10 +53,9 @@ pub struct LynxSession {
 }
 
 impl LynxSession {
-    fn new(thread_nr: usize) -> Self {
+    pub fn new(thread_nr: usize, comlynx: &ComlynxCable, cart: PathBuf, settings: &Settings) -> Result<Self, std::io::Error> {
         let mut slf = Self {
             thread_nr,
-            controlled_speed: false,
             lynx: Lynx::new(),
             disassembler: DisasmWidget::new(),
             timers: Timers::new(),
@@ -84,14 +80,18 @@ impl LynxSession {
         opts.show_ascii = false;
         slf.ram.set_options(opts);
 
-        slf
+        if let Err(e) = slf.initialize_core(comlynx, cart, settings) {
+            Err(e)
+        } else {
+            Ok(slf)
+        }
     }
 
-    fn show(&mut self, ctx: &egui::Context) {
+    pub fn show(&mut self, ctx: &egui::Context) {
 
         let title = match &self.cartridge {
             None => format!("Lynx {}", self.thread_nr),
-            Some(cart) => cart.file_name().unwrap().to_str().unwrap().to_string()
+            Some(cart) => format!("Lynx {} {}", cart.file_name().unwrap().to_str().unwrap(), self.thread_nr)
         };
 
         egui::Window::new(title)
@@ -99,17 +99,17 @@ impl LynxSession {
             .resizable(true)
             .vscroll(false)
             .show(ctx, |ui| {
-                egui::TopBottomPanel::top("top_panel")
+                egui::TopBottomPanel::top(format!("top_panel{}", self.thread_nr))
                     .resizable(false)
                     .default_height(30.0)
                     .show_inside(ui, |ui| self.top_panel(ui));
 
-                egui::SidePanel::left("central_left_panel")
+                egui::SidePanel::left(format!("central_left_panel{}", self.thread_nr))
                     .resizable(true)
                     .default_width(250.0)
                     .show_inside(ui, |ui| self.left_panel(ui));
             
-                egui::SidePanel::right("central_right_panel")
+                egui::SidePanel::right(format!("central_right_panel{}", self.thread_nr))
                     .resizable(true)
                     .default_width(250.0)
                     .show_inside(ui, |ui| self.right_panel(ui));
@@ -237,11 +237,11 @@ impl LynxSession {
             });
             ui.horizontal(|ui| {
                 if ui.button("📁")
-                        .on_hover_text("Save state")
+                        .on_hover_text("Save self")
                         .clicked() {
                     if let Some(path) = rfd::FileDialog::new()
-                        .add_filter("State", &["sal"])
-                        .set_title("Lynx state")
+                        .add_filter("self", &["sal"])
+                        .set_title("Lynx self")
                         .save_file() {
                             let size = self.lynx.serialize_size();
                             let mut data: Vec<u8> = vec![0; size];
@@ -252,23 +252,25 @@ impl LynxSession {
                     }
                 }
                 if ui.button("📂")
-                        .on_hover_text("Load state")
+                        .on_hover_text("Load self")
                         .clicked() {
                     if let Some(path) = rfd::FileDialog::new()
-                        .add_filter("State", &["sal"])
-                        .set_title("Lynx state")
+                        .add_filter("self", &["sal"])
+                        .set_title("Lynx self")
                         .pick_file() {
                             match std::fs::read(path) {
-                                Err(_) => panic!(),
+                                Err(e) => println!("deserialization error: {:?}", e),
                                 Ok(data) => match holani::deserialize(&data, &self.lynx) {
-                                    Err(_) => panic!(),
-                                    Ok(lynx) => self.lynx = lynx,
+                                    Err(e) => println!("deserialization error: {:?}", e),
+                                    Ok(mut lynx) => {
+                                        lynx.set_comlynx_cable(&self.lynx.comlynx_cable().clone());
+                                        self.lynx = lynx;
+                                    },
                                 }
                             };
                     }
                 }
             });
-            ui.checkbox(&mut self.controlled_speed, "Control speed");
         });
     }
 
@@ -296,101 +298,76 @@ impl LynxSession {
             }
         });        
     }
-}
-
-pub fn new_lynx_session(thread_nr: usize, on_done_tx: kanal::Sender<()>, cart: PathBuf, settings: settings::Settings) -> (JoinHandle<()>, kanal::Sender<egui::Context>) {
-    let (show_tx, show_rc) = kanal::unbounded::<egui::Context>();
-    let handle = std::thread::Builder::new()
-        .name(format!("Lynx {thread_nr}"))
-        .spawn(move || {
-            const CRYSTAL_FREQUENCY: u32 = 16_000_000;
-            let lim = RateLimiter::direct(Quota::per_second(NonZeroU32::new(CRYSTAL_FREQUENCY).unwrap()));
-            let mut speed_ok = false;
-            let mut state = LynxSession::new(thread_nr);
-
-            if let Some(path) = settings.boot_rom_path() {
-                state.lynx.load_rom_from_slice(&std::fs::read(path).unwrap()).unwrap()
-            };
-
-            state.lynx.load_cart_from_slice(&std::fs::read(cart.to_str().unwrap()).unwrap()).unwrap();
-            state.lynx.reset();
-            state.rotation = state.lynx.rotation();
-            state.cartridge = Some(cart);
-
-            loop {
-                
-                if state.controlled_speed { 
-                    match lim.check() {
-                        Err(_) => {
-                            thread::sleep(Duration::from_nanos(10));
-                            speed_ok = false;
-                        },
-                        Ok(_) => speed_ok = true,
-                    }
-                }
-
-                if !state.controlled_speed || speed_ok {
-                    match state.status {
-                        RunnerStatus::RunningAsked => {
-                            state.lynx.step_instruction();
-                            state.status = RunnerStatus::Running;
-                        }
-                        RunnerStatus::Running => {
-                            let instr_pc = state.lynx.mikey().cpu().last_ir_pc;
-                            if state.breakpoints.iter().any(|(en, addr)| { *en && *addr == instr_pc }) {
-                                state.status = RunnerStatus::Paused;
-                            } else {
-                                let ticks = state.lynx.step_instruction();
-                                let _ = lim.check_n(NonZeroU32::new(ticks as u32).unwrap());
-                            }
-                        }
-                        RunnerStatus::Step => {
-                            state.lynx.step_instruction();
-                            state.status = RunnerStatus::Paused;
-                        }
-                        RunnerStatus::Reset => {
-                            state.lynx.reset();
-                            state.status = RunnerStatus::Paused;
-                        }
-                        RunnerStatus::Paused => ()
-                    };
-                }
-
-                if show_rc.is_disconnected() {
-                    break;
-                }
-
-                if let Ok(Some(ctx)) = show_rc.try_recv() {
-                    state.show(&ctx);
-                    ctx.request_repaint_after(Duration::from_secs(1/75));
-
-                    let j = state.joystick;
-                    let s = state.switches;                        
-                    
-                    ctx.input(|ui| {
-                        state.joystick.set(Joystick::up, ui.key_down(egui::Key::ArrowUp));
-                        state.joystick.set(Joystick::down, ui.key_down(egui::Key::ArrowDown));
-                        state.joystick.set(Joystick::left, ui.key_down(egui::Key::ArrowLeft));
-                        state.joystick.set(Joystick::right, ui.key_down(egui::Key::ArrowRight));
-                        state.joystick.set(Joystick::option_1, ui.key_down(egui::Key::Num1));
-                        state.joystick.set(Joystick::option_2, ui.key_down(egui::Key::Num2));
-                        state.joystick.set(Joystick::inside, ui.key_down(egui::Key::Q));
-                        state.joystick.set(Joystick::outside, ui.key_down(egui::Key::W));
-                        state.switches.set(Switches::pause, ui.key_down(egui::Key::P));
-                    });
-
-                    if state.joystick != j {
-                        state.lynx.set_joystick_u8(state.joystick.bits());
-                    }
-                    if state.switches != s {
-                        state.lynx.set_switches_u8(state.switches.bits());
-                    }
-
-                    on_done_tx.send(()).unwrap();
+    
+    pub fn step(&mut self) {
+        match self.status {
+            RunnerStatus::RunningAsked => {
+                self.lynx.tick();
+                self.status = RunnerStatus::Running;
+            }
+            RunnerStatus::Running => {
+                let instr_pc = self.lynx.mikey().cpu().last_ir_pc;
+                if self.breakpoints.iter().any(|(en, addr)| { *en && *addr == instr_pc }) {
+                    self.status = RunnerStatus::Paused;
+                } else {
+                    self.lynx.tick();
                 }
             }
-        })
-        .expect("failed to spawn thread");
-    (handle, show_tx)
+            RunnerStatus::Step => {
+                self.lynx.step_instruction();
+                self.status = RunnerStatus::Paused;
+            }
+            RunnerStatus::Reset => {
+                self.lynx.reset();
+                self.status = RunnerStatus::Paused;
+            }
+            RunnerStatus::Paused => ()
+        };
+    }
+
+    pub fn handle_inputs(&mut self, ctx: &egui::Context) {
+        let j = self.joystick;
+        let s = self.switches;                        
+        
+        ctx.input(|ui| {
+            self.joystick.set(Joystick::up, ui.key_down(egui::Key::ArrowUp));
+            self.joystick.set(Joystick::down, ui.key_down(egui::Key::ArrowDown));
+            self.joystick.set(Joystick::left, ui.key_down(egui::Key::ArrowLeft));
+            self.joystick.set(Joystick::right, ui.key_down(egui::Key::ArrowRight));
+            self.joystick.set(Joystick::option_1, ui.key_down(egui::Key::Num1));
+            self.joystick.set(Joystick::option_2, ui.key_down(egui::Key::Num2));
+            self.joystick.set(Joystick::inside, ui.key_down(egui::Key::Q));
+            self.joystick.set(Joystick::outside, ui.key_down(egui::Key::W));
+            self.switches.set(Switches::pause, ui.key_down(egui::Key::P));
+        });
+
+        if self.joystick != j {
+            self.lynx.set_joystick_u8(self.joystick.bits());
+        }
+        if self.switches != s {
+            self.lynx.set_switches_u8(self.switches.bits());
+        }
+    }
+    
+    fn initialize_core(&mut self, comlynx: &ComlynxCable, cart: PathBuf, settings: &Settings) -> Result<(), std::io::Error> {
+        if let Some(path) = settings.boot_rom_path() {
+            if self.lynx.load_rom_from_slice(&std::fs::read(path).unwrap()).is_err() {
+                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Couldn't not load ROM file."))
+            }
+        };
+
+        if self.lynx.load_cart_from_slice(&std::fs::read(cart.to_str().unwrap()).unwrap()).is_err() {
+            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Couldn't not load Cartridge file."))
+        }
+
+        self.lynx.reset();
+
+        self.rotation = self.lynx.rotation();
+        self.cartridge = Some(cart);
+
+        self.lynx.set_comlynx_cable(comlynx);
+
+        Ok(())
+    }
 }
 

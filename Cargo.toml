@@ -4,18 +4,28 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-holani = { git = "https://github.com/LLeny/holani.git", rev = "48df41738a8965f2fdedff3e6ad19ad2214be7d3" }
+holani = { git = "https://github.com/LLeny/holani.git", rev = "ea2b41bf81483c78f4491921613d3cd1d3829b5a" }
 bitflags = "2.6.0"
-env_logger = { version = "0.11.5", default-features = false, features = [ "auto-color", "humantime", ] }
-log = { version = "0.4", features = ["max_level_trace", "release_max_level_warn"] }
+env_logger = { version = "0.11.5", default-features = false, features = [
+  "auto-color",
+  "humantime",
+] }
+log = { version = "0.4", features = [
+  "max_level_trace",
+  "release_max_level_warn",
+] }
 governor = "0.6"
 kanal = { git = "https://github.com/fereidani/kanal.git", rev = "125fb7876797f20c632b25660c2f41c2908f9007" }
 egui = "0.28"
-eframe = { version = "0.28", default-features = false, features = [ "default_fonts", "glow", "persistence" ] }
+eframe = { version = "0.28", default-features = false, features = [
+  "default_fonts",
+  "glow",
+  "persistence",
+] }
 serde = { version = "1", features = ["derive"] }
-confy = "0.3"
+confy = "0.6.1"
 egui_memory_editor = "0.2"
-rfd = "0.14"
+rfd = "0.15"
 macroquad = { git = "https://github.com/LLeny/macroquad.git", rev = "9fc8e6ec608b42cd72f88add7ceb751c351743ac" }
 egui-macroquad = { git = "https://github.com/LLeny/egui-macroquad.git", rev = "f57a3fc284a53329898b86bf6989f067bd5a8ffb" }
 rodio = "0.19"

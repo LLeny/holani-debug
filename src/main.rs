@@ -1,6 +1,7 @@
 use macroquad::window::Conf;
 
 mod debugger;
+mod core_runner;
 
 fn window_conf() -> Conf {
     Conf {

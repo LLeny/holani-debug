@@ -240,7 +240,6 @@ impl DisasmWidget {
         let max_lines = 0xffff;
 
         let scroll = ScrollArea::vertical()
-            .id_source("disasm")
             .max_height(f32::INFINITY)
             .auto_shrink([false, true]);
 
