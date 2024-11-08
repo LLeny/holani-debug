@@ -1,6 +1,6 @@
 use std::{io::Error, num::NonZeroU32, path::PathBuf, thread::{self, JoinHandle}, time::Duration};
 use governor::{Quota, RateLimiter};
-use holani::mikey::uart::comlynx_cable::ComlynxCable;
+use holani::mikey::uart::comlynx_cable_mutex::ComlynxCable;
 use crate::debugger::{session::LynxSession, settings::Settings};
 
 #[derive(Clone)]

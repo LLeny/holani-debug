@@ -1,10 +1,10 @@
 [package]
 name = "holani-debug"
-version = "0.6.4"
+version = "0.8.3"
 edition = "2021"
 
 [dependencies]
-holani = { git = "https://github.com/LLeny/holani.git", tag = "0.6.4" }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "0.8.3" }
 bitflags = "2.6.0"
 env_logger = { version = "0.11.5", default-features = false, features = [
   "auto-color",

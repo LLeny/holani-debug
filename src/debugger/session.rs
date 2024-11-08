@@ -1,7 +1,7 @@
 use std::{f32::consts::FRAC_PI_2, path::PathBuf};
 use egui::{vec2, Color32, RichText, TextureOptions, Vec2, Widget};
 use egui_memory_editor::MemoryEditor;
-use holani::{consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN}, suzy::registers::{Joystick, Switches}, Lynx};
+use holani::{cartridge::lnx_header::LNXRotation, consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable_mutex::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN, MikeyBusOwner}, suzy::registers::{Joystick, Switches}, Lynx};
 use super::{breakpoints::Breakpoints, disassembler::DisasmWidget, settings::Settings, timers::Timers, watches::Watches};
 use holani::consts::*;
 
@@ -47,7 +47,7 @@ pub struct LynxSession {
     watches_edit: Watches,
     joystick: Joystick,
     switches: Switches,
-    rotation: u8,
+    rotation: LNXRotation,
     cartridge: Option<PathBuf>,
     screen_buffer: Vec<u8>,
 }
@@ -69,7 +69,7 @@ impl LynxSession {
             watches_edit: Watches::new(),
             joystick: Joystick::empty(),
             switches: Switches::empty(),
-            rotation: 0,
+            rotation: LNXRotation::None,
             cartridge: None,
             screen_buffer: vec![0; RGB_SCREEN_BUFFER_LEN],
         };
@@ -126,7 +126,11 @@ impl LynxSession {
         ui.separator();
         self.watches_edit.show_ui(ui, &mut self.watches, self.lynx.ram());
         ui.separator();
-        self.interrupts_show(ui);
+        ui.horizontal(|ui| {
+            self.interrupts_show(ui);
+            ui.separator();
+            self.bus_show(ui);
+        });        
         ui.separator();
         self.timers.show(self.lynx.mikey().timers(), ui);
     }
@@ -155,8 +159,8 @@ impl LynxSession {
         let texture = ui.ctx().load_texture("screen", image, TextureOptions::LINEAR);
         let mut img = egui::Image::new(&texture);
         match self.rotation {
-            1 => img = img.rotate(FRAC_PI_2, Vec2::splat(0.5)),
-            2 => img = img.rotate(FRAC_PI_2*3.0, Vec2::splat(0.5)),
+            LNXRotation::_90 => img = img.rotate(FRAC_PI_2, Vec2::splat(0.5)),
+            LNXRotation::_270 => img = img.rotate(FRAC_PI_2*3.0, Vec2::splat(0.5)),
             _ => ()
         }
         img.fit_to_exact_size(ui.available_size()).ui(ui);
@@ -176,6 +180,22 @@ impl LynxSession {
             cond_strong_label!(ui, "1", ints & 2 != 0);
             cond_strong_label!(ui, "0", ints & 1 != 0);
         });
+    }
+
+    fn bus_show(&mut self, ui: &mut egui::Ui) {
+        let grant = self.lynx.bus().grant();
+        ui.vertical(|ui| {
+            ui.strong("Bus");
+            ui.horizontal(|ui| {
+                let owner = self.lynx.mikey().bus_owner();
+                cond_strong_label!(ui, "Mikey", grant);
+                ui.label("-");
+                cond_strong_label!(ui, "CPU", grant && owner == MikeyBusOwner::Cpu);    
+                cond_strong_label!(ui, "Refresh", grant && owner == MikeyBusOwner::Refresh);    
+                cond_strong_label!(ui, "Video", grant && owner == MikeyBusOwner::Video);                    
+            });
+            cond_strong_label!(ui, "Suzy", !grant);
+        });        
     }
 
     fn cpu_show(&mut self, ui: &mut egui::Ui) {
