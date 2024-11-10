@@ -319,7 +319,8 @@ impl LynxSession {
             cond_strong_label!(ui, "A", joy.contains(Joystick::inside));
             cond_strong_label!(ui, "B", joy.contains(Joystick::outside));
             cond_strong_label!(ui, "1", joy.contains(Joystick::option_1));
-            cond_strong_label!(ui, "2", joy.contains(Joystick::option_1));
+            cond_strong_label!(ui, "2", joy.contains(Joystick::option_2));
+            cond_strong_label!(ui, "P", self.lynx.switches().contains(Switches::pause));
         });
     }
 
