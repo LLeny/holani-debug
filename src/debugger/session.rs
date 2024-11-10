@@ -257,11 +257,11 @@ impl LynxSession {
             });
             ui.horizontal(|ui| {
                 if ui.button("📁")
-                        .on_hover_text("Save self")
+                        .on_hover_text("Save state")
                         .clicked() {
                     if let Some(path) = rfd::FileDialog::new()
-                        .add_filter("self", &["sal"])
-                        .set_title("Lynx self")
+                        .add_filter("state", &["sal"])
+                        .set_title("Lynx state")
                         .save_file() {
                             let size = self.lynx.serialize_size();
                             let mut data: Vec<u8> = vec![0; size];
@@ -272,11 +272,11 @@ impl LynxSession {
                     }
                 }
                 if ui.button("📂")
-                        .on_hover_text("Load self")
+                        .on_hover_text("Load state")
                         .clicked() {
                     if let Some(path) = rfd::FileDialog::new()
-                        .add_filter("self", &["sal"])
-                        .set_title("Lynx self")
+                        .add_filter("state", &["sal"])
+                        .set_title("Lynx state")
                         .pick_file() {
                             match std::fs::read(path) {
                                 Err(e) => println!("deserialization error: {:?}", e),
@@ -288,6 +288,20 @@ impl LynxSession {
                                     },
                                 }
                             };
+                    }
+                }
+                if ui.button("📝")
+                        .on_hover_text("Dump RAM")
+                        .clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .add_filter("Dump", &["dmp"])
+                        .set_title("Lynx dump")
+                        .save_file() {
+                            let mut data: Vec<u8> = vec![];
+                            for i in 0..=0xFFFF {
+                                data.push(self.lynx.ram().get(i));
+                            }                            
+                            if std::fs::write(path, data).is_err() { panic!() }
                     }
                 }
             });
