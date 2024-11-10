@@ -1,5 +1,5 @@
 use egui::{RichText, TextWrapMode, Vec2};
-use holani::consts::TIM0BKUP;
+use holani::consts::{AUD0VOL, TIM0BKUP};
 
 pub struct Timers {
 }
@@ -41,5 +41,36 @@ impl Timers {
                         ui.end_row();
                     }
                 });
+
+        ui.label(RichText::new("Audio").strong());
+
+                egui::Grid::new("audio_timers_grid")
+                        .striped(true)
+                        .spacing(Vec2::new(10.0, ui.style().spacing.item_spacing.y))
+                        .show(ui, |ui| {
+                            ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                            ui.style_mut().spacing.item_spacing.x = 3.0;
+        
+                            ui.strong("Timer");
+                            ui.strong("Backup");
+                            ui.strong("Static control");
+                            ui.strong("Current");
+                            ui.strong("Dynamic control");
+                            ui.strong("Triggers @");
+                            ui.end_row();
+        
+                            for i in 0..=3 {
+                                ui.label(format!("{}", i));
+                                ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+4)));
+                                ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+5)));
+                                ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+6)));
+                                ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+7)));
+                                ui.label(match timers.timer_trigger(8+i as usize) {
+                                    u64::MAX => "∞".to_string(),
+                                    v => format!("{}", v),
+                                });
+                                ui.end_row();
+                            }
+                        });
     }
 }
