@@ -23,7 +23,7 @@ impl Timers {
                     ui.strong("Timer");
                     ui.strong("Backup");
                     ui.strong("Static control");
-                    ui.strong("Current");
+                    ui.strong("Counter");
                     ui.strong("Dynamic control");
                     ui.strong("Triggers @");
                     ui.end_row();
@@ -46,21 +46,29 @@ impl Timers {
 
                 egui::Grid::new("audio_timers_grid")
                         .striped(true)
-                        .spacing(Vec2::new(10.0, ui.style().spacing.item_spacing.y))
+                        .spacing(Vec2::new(7.0, ui.style().spacing.item_spacing.y))
                         .show(ui, |ui| {
                             ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
                             ui.style_mut().spacing.item_spacing.x = 3.0;
         
                             ui.strong("Timer");
+                            ui.strong("Vol");
+                            ui.strong("Feedback");
+                            ui.strong("Output");
+                            ui.strong("Shift reg");
                             ui.strong("Backup");
                             ui.strong("Static control");
-                            ui.strong("Current");
-                            ui.strong("Dynamic control");
+                            ui.strong("Counter");
+                            ui.strong("Others");
                             ui.strong("Triggers @");
                             ui.end_row();
         
                             for i in 0..=3 {
                                 ui.label(format!("{}", i));
+                                ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8))));
+                                ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+1)));
+                                ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+2)));
+                                ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+3)));
                                 ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+4)));
                                 ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+5)));
                                 ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+6)));
