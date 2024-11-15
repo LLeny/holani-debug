@@ -47,6 +47,7 @@ enum AddressingMode
     Ind
 }
 
+#[allow(dead_code)]
 fn get_opcode_target(entry: &DisasmToken, cpu: &M6502, lynx: &Lynx) -> i16
 {
     let mut addr = entry.base_address;
@@ -256,6 +257,7 @@ impl DisasmWidget {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     let mut current_line = line_range.start;
+                    #[allow(unused_assignments)]
                     let mut token: DisasmToken = Default::default();
 
                     while current_line != line_range.end {
