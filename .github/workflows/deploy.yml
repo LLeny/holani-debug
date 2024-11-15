@@ -1,0 +1,109 @@
+name: Deploy Workflow
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  build-linux:
+    name: Build Linux
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check architecture
+        run: |
+          uname -a
+          find $(rustc --print sysroot) -name 'libstd-*.rlib' | sed -ne 's:^.*/\([^/]*\)/lib/libstd-[^/]*.rlib:\1:p'
+      - name: apt
+        run: sudo apt update && sudo apt install -yq libasound2 libasound2-dev alsa-tools alsa-utils
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Build Base
+        run: cargo build --release
+      - name: Transform filenames
+        run: mv target/release/holani-debug holani-debug-x86_64-linux
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_debug-x86_64-linux
+          path: holani-debug-x86_64-linux
+          retention-days: 5
+  build-windows:
+    name: Build Windows
+    timeout-minutes: 30
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Build Base
+        run: cargo build --release     
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_debug-x86_64-windows
+          path: target/release/holani-debug.exe
+          retention-days: 5
+  build-osx-x86_64:
+    name: Build osx x64_64
+    timeout-minutes: 30
+    runs-on: macos-14
+    steps:
+      - name: Check architecture
+        run: |
+          uname -a
+          find $(rustc --print sysroot) -name 'libstd-*.rlib' | sed -ne 's:^.*/\([^/]*\)/lib/libstd-[^/]*.rlib:\1:p'
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Install x86_64 target
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: x86_64-apple-darwin
+      - name: Build Base x86_64
+        run: cargo build --release --target x86_64-apple-darwin
+      - name: Transform filenames
+        run: mv target/x86_64-apple-darwin/release/holani-debug holani-debug-x86_64-osx        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_debug-x86_64-osx
+          path: holani-debug-x86_64-osx
+          retention-days: 5 
+  build-osx-aarch64:
+    name: Build osx aarch64
+    timeout-minutes: 30
+    runs-on: macos-14
+    steps:
+      - name: Check architecture
+        run: |
+          uname -a
+          find $(rustc --print sysroot) -name 'libstd-*.rlib' | sed -ne 's:^.*/\([^/]*\)/lib/libstd-[^/]*.rlib:\1:p'
+      - name: Checkout code from repository
+        uses: actions/checkout@v4
+      - name: Build Base aarch64
+        run: cargo build --release 
+      - name: Transform filenames
+        run: mv target/release/holani-debug holani-debug-aarch64-osx
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: holani_debug-aarch64-osx
+          path: holani-debug-aarch64-osx
+          retention-days: 5    
+          
+  release:
+    name: Release
+    needs: [build-linux, build-windows, build-osx-x86_64, build-osx-aarch64]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            holani_debug-x86_64-linux/holani-debug-x86_64-linux
+            holani_debug-x86_64-windows/holani-debug.exe
+            holani_debug-x86_64-osx/holani-debug-x86_64-osx
+            holani_debug-aarch64-osx/holani-debug-aarch64-osx
