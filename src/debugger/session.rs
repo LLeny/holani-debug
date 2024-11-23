@@ -191,8 +191,7 @@ impl LynxSession {
                 cond_strong_label!(ui, "Mikey", grant);
                 ui.label("-");
                 cond_strong_label!(ui, "CPU", grant && owner == MikeyBusOwner::Cpu);    
-                cond_strong_label!(ui, "Refresh", grant && owner == MikeyBusOwner::Refresh);    
-                cond_strong_label!(ui, "Video", grant && owner == MikeyBusOwner::Video);                    
+                cond_strong_label!(ui, "Refresh/Video", grant && owner == MikeyBusOwner::RefreshAndVideo);    
             });
             cond_strong_label!(ui, "Suzy", !grant);
         });        
@@ -331,7 +330,7 @@ impl LynxSession {
             for i in 0..16 {
                 ui.colored_label(pal_color!(regs, i),"⏹");
             }
-        });        
+        });   
     }
     
     pub fn step(&mut self) {

@@ -1,10 +1,10 @@
 [package]
 name = "holani-debug"
-version = "0.9.1"
+version = "0.9.4"
 edition = "2021"
 
 [dependencies]
-holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.1" }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.4" }
 bitflags = "2.6.0"
 env_logger = { version = "0.11.5", default-features = false, features = [
   "auto-color",
@@ -28,4 +28,4 @@ egui_memory_editor = "0.2"
 rfd = "0.15"
 macroquad = { git = "https://github.com/LLeny/macroquad.git", rev = "9fc8e6ec608b42cd72f88add7ceb751c351743ac" }
 egui-macroquad = { git = "https://github.com/LLeny/egui-macroquad.git", rev = "f57a3fc284a53329898b86bf6989f067bd5a8ffb" }
-rodio = "0.19"
+rodio = "0.20"
