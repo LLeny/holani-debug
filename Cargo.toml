@@ -1,10 +1,10 @@
 [package]
 name = "holani-debug"
-version = "0.9.4"
+version = "0.9.6"
 edition = "2021"
 
 [dependencies]
-holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.4" }
+holani = { git = "https://github.com/LLeny/holani.git", tag = "0.9.6" }
 bitflags = "2.6.0"
 env_logger = { version = "0.11.5", default-features = false, features = [
   "auto-color",
@@ -14,7 +14,7 @@ log = { version = "0.4", features = [
   "max_level_trace",
   "release_max_level_warn",
 ] }
-governor = "0.6"
+governor = "0.8"
 kanal = { git = "https://github.com/fereidani/kanal.git", rev = "125fb7876797f20c632b25660c2f41c2908f9007" }
 egui = "0.28"
 eframe = { version = "0.28", default-features = false, features = [

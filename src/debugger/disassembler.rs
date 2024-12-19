@@ -1,5 +1,5 @@
 use eframe::egui::{self,  ScrollArea, TextStyle, TextWrapMode, Ui, Vec2};
-use holani::{mikey::cpu::M6502, Lynx};
+use holani::{mikey::cpu::M6502, lynx::Lynx};
 
 macro_rules! get_word {
     ($lynx: ident, $addr: expr) => {

@@ -1,7 +1,7 @@
 use std::{f32::consts::FRAC_PI_2, path::PathBuf};
 use egui::{vec2, Color32, RichText, TextureOptions, Vec2, Widget};
 use egui_memory_editor::MemoryEditor;
-use holani::{cartridge::lnx_header::LNXRotation, consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable_mutex::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN, MikeyBusOwner}, suzy::registers::{Joystick, Switches}, Lynx};
+use holani::{cartridge::lnx_header::LNXRotation, consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable_mutex::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN, MikeyBusOwner}, suzy::registers::{Joystick, Switches}, lynx::Lynx};
 use super::{breakpoints::Breakpoints, disassembler::DisasmWidget, settings::Settings, timers::Timers, watches::Watches};
 use holani::consts::*;
 
