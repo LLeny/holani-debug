@@ -24,7 +24,7 @@ eframe = { version = "0.28", default-features = false, features = [
 ] }
 serde = { version = "1", features = ["derive"] }
 confy = "0.6.1"
-egui_memory_editor = "0.2"
+egui_memory_editor = "=0.2.10"
 rfd = "0.15"
 macroquad = { git = "https://github.com/LLeny/macroquad.git", rev = "9fc8e6ec608b42cd72f88add7ceb751c351743ac" }
 egui-macroquad = { git = "https://github.com/LLeny/egui-macroquad.git", rev = "f57a3fc284a53329898b86bf6989f067bd5a8ffb" }
