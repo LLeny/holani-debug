@@ -1,7 +1,7 @@
 use std::{f32::consts::FRAC_PI_2, path::PathBuf};
 use egui::{vec2, Color32, RichText, TextureOptions, Vec2, Widget};
 use egui_memory_editor::MemoryEditor;
-use holani::{cartridge::lnx_header::LNXRotation, consts::INTSET, mikey::{cpu::M6502Flags, uart::comlynx_cable_mutex::ComlynxCable, video::RGB_SCREEN_BUFFER_LEN, MikeyBusOwner}, suzy::registers::{Joystick, Switches}, lynx::Lynx};
+use holani::{cartridge::lnx_header::LNXRotation, consts::INTSET, lynx::Lynx, mikey::{MikeyBusOwner, cpu::M6502Flags, uart::comlynx_cable_mutex::ComlynxCable, video::RGBA_SCREEN_BUFFER_LEN}, suzy::registers::{Joystick, Switches}};
 use super::{breakpoints::Breakpoints, disassembler::DisasmWidget, settings::Settings, timers::Timers, watches::Watches};
 use holani::consts::*;
 
@@ -71,7 +71,7 @@ impl LynxSession {
             switches: Switches::empty(),
             rotation: LNXRotation::None,
             cartridge: None,
-            screen_buffer: vec![0; RGB_SCREEN_BUFFER_LEN],
+            screen_buffer: vec![0; RGBA_SCREEN_BUFFER_LEN],
         };
 
         let mut opts = slf.ram.options.clone();
@@ -153,9 +153,9 @@ impl LynxSession {
 
     fn central_panel(&mut self, ui: &mut egui::Ui) {
         if self.lynx.redraw_requested() {
-            self.screen_buffer.copy_from_slice(self.lynx.screen_rgb().as_slice());
+            self.screen_buffer.copy_from_slice(self.lynx.screen_rgba().as_slice());
         }
-        let image = egui::ColorImage::from_rgb([160, 102], &self.screen_buffer);
+        let image = egui::ColorImage::from_rgba_premultiplied([160, 102], &self.screen_buffer);
         let texture = ui.ctx().load_texture("screen", image, TextureOptions::LINEAR);
         let mut img = egui::Image::new(&texture);
         match self.rotation {
@@ -198,7 +198,7 @@ impl LynxSession {
     }
 
     fn cpu_show(&mut self, ui: &mut egui::Ui) {
-        let ticks = self.lynx.ticks();
+        let ticks = 0;
         let cpu = self.lynx.mikey().cpu();
         ui.vertical(|ui| {
             ui.label(RichText::new("CPU").strong());

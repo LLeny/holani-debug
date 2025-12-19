@@ -34,8 +34,8 @@ impl Timers {
                         ui.label(format!("{:08b}", timers.peek(TIM0BKUP+(i*4)+1)));
                         ui.label(format!("{:02X}", timers.peek(TIM0BKUP+(i*4)+2)));
                         ui.label(format!("{:08b}", timers.peek(TIM0BKUP+(i*4)+3)));
-                        ui.label(match timers.timer_trigger(i as usize) {
-                            u64::MAX => "∞".to_string(),
+                        ui.label(match timers.timer_countdown(i as usize) {
+                            u16::MAX => "∞".to_string(),
                             v => format!("{}", v),
                         });
                         ui.end_row();
@@ -73,8 +73,8 @@ impl Timers {
                                 ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+5)));
                                 ui.label(format!("{:02X}", timers.peek(AUD0VOL+(i*8)+6)));
                                 ui.label(format!("{:08b}", timers.peek(AUD0VOL+(i*8)+7)));
-                                ui.label(match timers.timer_trigger(8+i as usize) {
-                                    u64::MAX => "∞".to_string(),
+                                ui.label(match timers.timer_countdown(8+i as usize) {
+                                    u16::MAX => "∞".to_string(),
                                     v => format!("{}", v),
                                 });
                                 ui.end_row();
